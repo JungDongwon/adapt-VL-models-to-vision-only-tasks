@@ -6,12 +6,12 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
 from tqdm import tqdm
-from training_utils import get_all_checkpoints
+#from training_utils import get_all_checkpoints
 from datasets import get_text_image_pretraining_dataset
-from clip_bert.modeling_bert import BertImageForMaskedLM
+from models.clip_bert.clip_bert import ClipBertForImageClassification
 from torch.utils.data.distributed import DistributedSampler
 from transformers import BertTokenizer, DataCollatorForLanguageModeling, BertConfig, VisualBertForPreTraining, LxmertForPreTraining
-from lxmert.alterations import LxmertLanguageOnlyXLayer
+#from lxmert.alterations import LxmertLanguageOnlyXLayer
 import copy
 import os
 import torch.nn.functional as F
@@ -96,9 +96,10 @@ def main(args):
         assert args.bert_checkpoint is not None, "A pretrained clip-bert checkpoint must be given for the finetuning process"
         tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")     
         config = BertConfig.from_pretrained("bert-base-uncased")
-        model = BertImageForMaskedLM(config)
+        model = ClipBertForImageClassification(config)
         model.load_state_dict(torch.load(args.bert_checkpoint, map_location="cpu")["module"], strict=False)
 
+        # TO-DO: change this to precomputed visual features
         visual_features = torch.rand(CLIP_BERT_FEATURES_SHAPE, requires_grad=True)
         visual_boxes = None
 
@@ -106,6 +107,7 @@ def main(args):
     elif args.model == "lxmert":
         model = LxmertForPreTraining.from_pretrained("unc-nlp/lxmert-base-uncased")
 
+        # TO-DO: change this to precomputed visual features
         visual_features = torch.rand(LXMERT_FEATURES_SHAPE, requires_grad=True)
         visual_boxes = torch.rand(LXMERT_NORMALIZED_BOXES_SHAPE, requires_grad=True)
 
@@ -115,6 +117,7 @@ def main(args):
         tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         model = VisualBertForPreTraining.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
 
+        # TO-DO: change this to precomputed visual features
         visual_features = torch.rand(VISUALBERT_FEATURES_SHAPE, requires_grad=True)
         visual_boxes = None
 
@@ -124,14 +127,18 @@ def main(args):
 
     model.to(device)
     model.train()
-    for param in model.parameters():
-        param.requires_grad = False
+    #for param in model.parameters():
+    #    param.requires_grad = False
 
-    # the visual features are what we will fine-tune, not the model
     if args.model == "lxmert":
-        optimizer = torch.optim.Adam([visual_features, visual_boxes], lr=args.lr)
+        #optimizer = torch.optim.Adam([visual_features, visual_boxes], lr=args.lr)
+        visual_features.requires_grad = False
+        visual_boxes.requires_grad = False
     else:
-        optimizer = torch.optim.Adam([visual_features], lr=args.lr)
+        #optimizer = torch.optim.Adam([visual_features], lr=args.lr)
+        visual_features.requires_grad = False
+
+    optimizer = torch.optim.Adam(model.paramters(), lr=args.lr)
 
     train_path, val_path = args.text_dataset
     train_ds, val_ds = get_text_image_pretraining_dataset(train_path, 

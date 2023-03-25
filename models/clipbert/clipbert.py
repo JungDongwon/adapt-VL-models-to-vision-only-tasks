@@ -1,3 +1,14 @@
+from transformers import BertModel, BertPreTrainedModel
+from transformers.modeling_outputs import SequenceClassifierOutput
+
+from dataclasses import dataclass
+import torch
+from torch import nn
+from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
+from typing import Optional, Union, List, Tuple, Dict, Any
+import torch.nn.functional as F
+from transformers.models.bert.modeling_bert import BertEmbeddings
+
 class BertImageEmbeddings(BertEmbeddings):
     """
     Patched version of BertEmbeddings where no positional nor token_type embeddings are added where token_type_ids is -1
