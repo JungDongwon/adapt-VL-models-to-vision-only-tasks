@@ -1,14 +1,13 @@
 import argparse
 import torch
-import transformers
 import logging
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
 from tqdm import tqdm
 #from training_utils import get_all_checkpoints
-from datasets import get_text_image_pretraining_dataset
-from models.clip_bert.clip_bert import ClipBertForImageClassification
+from .datasets import get_text_image_pretraining_dataset
+from models import ClipBertForImageClassification
 from torch.utils.data.distributed import DistributedSampler
 from transformers import BertTokenizer, DataCollatorForLanguageModeling, BertConfig, VisualBertForPreTraining, LxmertForPreTraining
 #from lxmert.alterations import LxmertLanguageOnlyXLayer
