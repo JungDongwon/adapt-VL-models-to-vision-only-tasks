@@ -9,14 +9,15 @@ DATA_DIR=./data
 # you also need to set the CHECKPOINT_DIR, to which the checkpoints should be saved
 CHECKPOINT_DIR=./checkpoints
 
-python finetune_visual_features.py \
-    --text-dataset $DATA_DIR/no-text-features/{train,val}.jsonl \
+python finetune_vision_only_task.py \
+    --text-dataset $DATA_DIR/adapatations/no-text-features/{train,val}.jsonl \
+    --image-features-path $DATA_DIR/image-features/tiny-imagenet/image_features.hdf5 \
     --evaluate-every 40 \
     --checkpoint-every 40 \
     --checkpoint-max 1 \
     --checkpoint-dir $CHECKPOINT_DIR/clip-bert-lxmert-middle-lr \
     --model "clip-bert" \
-    --bert-checkpoint "./models/clip-bert/mp_rank_00_model_states.pt" \
+    --bert-checkpoint "./models/model-weights/clipbert/mp_rank_00_model_states.pt" \
     --batch-size 64 \
     --tensorboard-logdir "./logs/no-text-features-clipbert" \
     --lr 0.005

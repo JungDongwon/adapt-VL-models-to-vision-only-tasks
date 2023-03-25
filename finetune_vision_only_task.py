@@ -6,13 +6,11 @@ from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
 from tqdm import tqdm
 #from training_utils import get_all_checkpoints
-from .datasets import get_text_image_pretraining_dataset
-from models import ClipBertForImageClassification
+from datasets import get_text_image_pretraining_dataset
+from models.clipbert import ClipBertForImageClassification
 from torch.utils.data.distributed import DistributedSampler
 from transformers import BertTokenizer, DataCollatorForLanguageModeling, BertConfig, VisualBertForPreTraining, LxmertForPreTraining
 #from lxmert.alterations import LxmertLanguageOnlyXLayer
-import copy
-import os
 import torch.nn.functional as F
 
 LXMERT_FEATURES_SHAPE = (36, 2048)
@@ -25,6 +23,7 @@ def get_args():
 
     group = parser.add_argument_group("Data", "Data configuration")
     group.add_argument("--text-dataset", nargs=2, help="train and val files respectively")
+    group.add_argument("--image-features-path", default=None, help="Precomputed image features")
 
     group = parser.add_argument_group("Training", "Training configuration")
     group.add_argument("--checkpoint-dir", type=Path, default=None, help="Directory to load and save checkpoints to")
@@ -102,7 +101,7 @@ def main(args):
         model.load_state_dict(torch.load(args.bert_checkpoint, map_location="cpu")["module"], strict=False)
 
         # TO-DO: change this to precomputed visual features
-        visual_features = torch.rand(CLIP_BERT_FEATURES_SHAPE, requires_grad=True)
+        visual_features = torch.rand(CLIP_BERT_FEATURES_SHAPE)
         visual_boxes = None
 
         batch_transformer = get_clipbert_batch
@@ -110,8 +109,8 @@ def main(args):
         model = LxmertForPreTraining.from_pretrained("unc-nlp/lxmert-base-uncased")
 
         # TO-DO: change this to precomputed visual features
-        visual_features = torch.rand(LXMERT_FEATURES_SHAPE, requires_grad=True)
-        visual_boxes = torch.rand(LXMERT_NORMALIZED_BOXES_SHAPE, requires_grad=True)
+        visual_features = torch.rand(LXMERT_FEATURES_SHAPE)
+        visual_boxes = torch.rand(LXMERT_NORMALIZED_BOXES_SHAPE)
 
         tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         batch_transformer = get_lxmert_batch
@@ -120,7 +119,7 @@ def main(args):
         model = VisualBertForPreTraining.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
 
         # TO-DO: change this to precomputed visual features
-        visual_features = torch.rand(VISUALBERT_FEATURES_SHAPE, requires_grad=True)
+        visual_features = torch.rand(VISUALBERT_FEATURES_SHAPE)
         visual_boxes = None
 
         batch_transformer = get_visualbert_batch
@@ -129,8 +128,13 @@ def main(args):
 
     model.to(device)
     model.train()
-    #for param in model.parameters():
-    #    param.requires_grad = False
+    
+    for param in model.parameters():
+        param.requires_grad = False
+
+    for name, param in model.named_parameters():
+        if 'classifier' in name or 'pooler' in name or 'img_projection' in name:
+            param.requires_grad = True
 
     if args.model == "lxmert":
         #optimizer = torch.optim.Adam([visual_features, visual_boxes], lr=args.lr)
@@ -140,14 +144,13 @@ def main(args):
         #optimizer = torch.optim.Adam([visual_features], lr=args.lr)
         visual_features.requires_grad = False
 
-    optimizer = torch.optim.Adam(model.paramters(), lr=args.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
     train_path, val_path = args.text_dataset
     train_ds, val_ds = get_text_image_pretraining_dataset(train_path, 
                                                           val_path, 
                                                           tokenizer, 
-                                                          image_features_path=None, 
-                                                          use_visual_prediction=False)
+                                                          image_features_path=None)
     
     # TO-DO: change this to our data collator
     collator = DataCollatorForLanguageModeling(tokenizer, mlm=True, mlm_probability=0.15)

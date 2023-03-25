@@ -1,5 +1,5 @@
 from transformers import BertModel, BertPreTrainedModel
-from transformers.modeling_outputs import SequenceClassifierOutput
+from transformers.modeling_outputs import ImageClassifierOutput
 
 from dataclasses import dataclass
 import torch
@@ -8,6 +8,8 @@ from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 from typing import Optional, Union, List, Tuple, Dict, Any
 import torch.nn.functional as F
 from transformers.models.bert.modeling_bert import BertEmbeddings
+
+CLIP_EMBED_DIM = 512
 
 class BertImageEmbeddings(BertEmbeddings):
     """
