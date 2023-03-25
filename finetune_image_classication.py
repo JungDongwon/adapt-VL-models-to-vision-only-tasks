@@ -42,6 +42,7 @@ def get_args():
 
     return parser.parse_args()
 
+# TO-DO: we should custimize the batch transformer for our adaptations
 def get_lxmert_batch(batch, visual_features, visual_boxes):
     batch_size = batch["input_ids"].shape[0]
     visual_features = visual_features.unsqueeze(0).repeat(batch_size, 1, 1)
@@ -54,6 +55,7 @@ def get_lxmert_batch(batch, visual_features, visual_boxes):
     )
     return batch
 
+# TO-DO: we should custimize the batch transformer for our adaptations
 def get_visualbert_batch(batch, visual_features, visual_boxes):
     batch_size = batch["input_ids"].shape[0]
     visual_embeds = visual_features.unsqueeze(0).repeat(batch_size, 1, 1)
@@ -75,7 +77,8 @@ def get_visualbert_batch(batch, visual_features, visual_boxes):
     )
 
     return batch
-    
+
+# TO-DO: we should custimize the batch transformer for our adaptations
 def get_clipbert_batch(batch, visual_features, visual_boxes):
     batch_size = batch["input_ids"].shape[0]
     img_feats = visual_features.unsqueeze(0).repeat(batch_size, 1).unsqueeze(1)
@@ -147,6 +150,7 @@ def main(args):
                                                           image_features_path=None, 
                                                           use_visual_prediction=False)
     
+    # TO-DO: change this to our data collator
     collator = DataCollatorForLanguageModeling(tokenizer, mlm=True, mlm_probability=0.15)
 
     train_dataloader = DataLoader(train_ds, 

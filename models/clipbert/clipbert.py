@@ -106,6 +106,24 @@ class BertPooler(nn.Module):
         pooled_output = self.activation(pooled_output)
         return pooled_output
 
+"""
+def get_clipbert_batch(batch, visual_feats=None, use_imagined_visual_feats=False):
+    # align the visual inputs
+    if use_imagined_visual_feats:
+        assert "img_feats" in batch, "With 'use_imagined_visual_feats'=True, visual features should already be present in batch"
+        return batch
+    elif visual_feats is not None:
+        batch_size = len(batch)
+        img_feats = visual_feats.unsqueeze(0).repeat(batch_size, 1).unsqueeze(1)
+        batch.update(
+            {
+                "img_feats": img_feats
+            }
+        )
+
+    return batch
+"""
+
 class ClipBertForImageClassification(BertPreTrainedModel):
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
     _keys_to_ignore_on_load_missing = [r"position_ids"]

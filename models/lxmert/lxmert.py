@@ -10,6 +10,7 @@ from typing import Optional, Union, List, Tuple, Dict, Any
 LXMERT_FEATURES_SHAPE = (1, 2048)
 LXMERT_NORMALIZED_BOXES_SHAPE = (1, 4)
 
+"""
 def get_lxmert_batch(batch, visual_feats=None, visual_boxes=None):
     # align the visual inputs
     batch_size = len(batch)
@@ -28,6 +29,7 @@ def get_lxmert_batch(batch, visual_feats=None, visual_boxes=None):
     })
 
     return batch
+"""
 
 @dataclass
 class DataCollatorWithPaddingSkippingFeatures:

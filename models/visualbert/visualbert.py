@@ -10,6 +10,7 @@ import torch.nn.functional as F
 
 VISUALBERT_FEATURES_SHAPE = (36, 2048)
 
+"""
 def get_visualbert_batch(batch, visual_feats=None):
     # align the visual inputs
     if visual_feats is not None:
@@ -27,6 +28,7 @@ def get_visualbert_batch(batch, visual_feats=None):
         )
 
     return batch
+"""
 
 class VisualBertConfigForSequenceClassification(VisualBertConfig):
     r"""
