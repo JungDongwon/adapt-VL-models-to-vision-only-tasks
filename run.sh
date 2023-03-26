@@ -10,8 +10,9 @@ DATA_DIR=./data
 CHECKPOINT_DIR=./checkpoints
 
 python finetune_vision_only_task.py \
-    --text-dataset $DATA_DIR/adapatations/no-text-features/{train,val}.jsonl \
-    --image-features-path $DATA_DIR/image-features/tiny-imagenet/image_features.hdf5 \
+    --text-dataset $DATA_DIR/adaptations/no-text-features/{train,val}.jsonl \
+    --train-image-features-path $DATA_DIR/image-features/tiny-imagenet/train_image_features.hdf5 \
+    --valid-image-features-path $DATA_DIR/image-features/tiny-imagenet/valid_image_features.hdf5 \
     --evaluate-every 40 \
     --checkpoint-every 40 \
     --checkpoint-max 1 \

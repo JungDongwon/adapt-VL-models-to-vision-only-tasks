@@ -1,3 +1,4 @@
+import os
 import argparse
 import torch
 import logging
@@ -6,7 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 from pathlib import Path
 from tqdm import tqdm
 #from training_utils import get_all_checkpoints
-from datasets import get_text_image_pretraining_dataset
+from datasets import get_text_image_pretraining_dataset, DataCollatorWithPaddingSkippingFeatures
 from models.clipbert import ClipBertForImageClassification
 from torch.utils.data.distributed import DistributedSampler
 from transformers import BertTokenizer, DataCollatorForLanguageModeling, BertConfig, VisualBertForPreTraining, LxmertForPreTraining
@@ -23,7 +24,8 @@ def get_args():
 
     group = parser.add_argument_group("Data", "Data configuration")
     group.add_argument("--text-dataset", nargs=2, help="train and val files respectively")
-    group.add_argument("--image-features-path", default=None, help="Precomputed image features")
+    group.add_argument("--train-image-features-path", default=None, help="Precomputed train image features")
+    group.add_argument("--valid-image-features-path", default=None, help="Precomputed valid image features")
 
     group = parser.add_argument_group("Training", "Training configuration")
     group.add_argument("--checkpoint-dir", type=Path, default=None, help="Directory to load and save checkpoints to")
@@ -77,6 +79,7 @@ def get_visualbert_batch(batch, visual_features, visual_boxes):
     return batch
 
 # TO-DO: we should custimize the batch transformer for our adaptations
+"""
 def get_clipbert_batch(batch, visual_features, visual_boxes):
     batch_size = batch["input_ids"].shape[0]
     img_feats = visual_features.unsqueeze(0).repeat(batch_size, 1).unsqueeze(1)
@@ -86,6 +89,7 @@ def get_clipbert_batch(batch, visual_features, visual_boxes):
         }
     )
     return batch
+"""
 
 def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -101,16 +105,18 @@ def main(args):
         model.load_state_dict(torch.load(args.bert_checkpoint, map_location="cpu")["module"], strict=False)
 
         # TO-DO: change this to precomputed visual features
-        visual_features = torch.rand(CLIP_BERT_FEATURES_SHAPE)
-        visual_boxes = None
+        #visual_features = torch.rand(CLIP_BERT_FEATURES_SHAPE)
+        #visual_boxes = None
+        multimodal_features_to_skip = ("img_feats")
 
-        batch_transformer = get_clipbert_batch
+        #batch_transformer = get_clipbert_batch
     elif args.model == "lxmert":
         model = LxmertForPreTraining.from_pretrained("unc-nlp/lxmert-base-uncased")
 
         # TO-DO: change this to precomputed visual features
-        visual_features = torch.rand(LXMERT_FEATURES_SHAPE)
-        visual_boxes = torch.rand(LXMERT_NORMALIZED_BOXES_SHAPE)
+        #visual_features = torch.rand(LXMERT_FEATURES_SHAPE)
+        #visual_boxes = torch.rand(LXMERT_NORMALIZED_BOXES_SHAPE)
+        multimodal_features_to_skip = ("visual_feats", "visual_pos")
 
         tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
         batch_transformer = get_lxmert_batch
@@ -119,8 +125,9 @@ def main(args):
         model = VisualBertForPreTraining.from_pretrained("uclanlp/visualbert-vqa-coco-pre")
 
         # TO-DO: change this to precomputed visual features
-        visual_features = torch.rand(VISUALBERT_FEATURES_SHAPE)
-        visual_boxes = None
+        #visual_features = torch.rand(VISUALBERT_FEATURES_SHAPE)
+        #visual_boxes = None
+        multimodal_features_to_skip = ("visual_embeds", "visual_token_type_ids", "visual_attention_mask", "labels")
 
         batch_transformer = get_visualbert_batch
     else:
@@ -136,6 +143,7 @@ def main(args):
         if 'classifier' in name or 'pooler' in name or 'img_projection' in name:
             param.requires_grad = True
 
+    """
     if args.model == "lxmert":
         #optimizer = torch.optim.Adam([visual_features, visual_boxes], lr=args.lr)
         visual_features.requires_grad = False
@@ -143,6 +151,7 @@ def main(args):
     else:
         #optimizer = torch.optim.Adam([visual_features], lr=args.lr)
         visual_features.requires_grad = False
+    """
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
 
@@ -150,10 +159,12 @@ def main(args):
     train_ds, val_ds = get_text_image_pretraining_dataset(train_path, 
                                                           val_path, 
                                                           tokenizer, 
-                                                          image_features_path=None)
+                                                          train_image_features_path=args.train_image_features_path,
+                                                          valid_image_features_path=args.valid_image_features_path)
     
     # TO-DO: change this to our data collator
-    collator = DataCollatorForLanguageModeling(tokenizer, mlm=True, mlm_probability=0.15)
+    #collator = DataCollatorForLanguageModeling(tokenizer, mlm=True, mlm_probability=0.15)
+    collator = DataCollatorWithPaddingSkippingFeatures(tokenizer, features_to_skip = multimodal_features_to_skip)
 
     train_dataloader = DataLoader(train_ds, 
                                   batch_size=args.batch_size, 
@@ -171,7 +182,7 @@ def main(args):
             step += 1
             optimizer.zero_grad()
             # adapt batch to model
-            batch = batch_transformer(batch, visual_features, visual_boxes)
+            #batch = batch_transformer(batch, visual_features, visual_boxes)
             batch = {k: v.to(device) for k, v in batch.items()}
 
             output = model(**batch)
@@ -186,7 +197,8 @@ def main(args):
             if args.evaluate_every is not None and \
                 step % args.evaluate_every == 0:
                 model.eval()
-                new_test_loss = evaluate(model, visual_features, visual_boxes, device, val_dataloader, batch_transformer)
+                #new_test_loss = evaluate(model, visual_features, visual_boxes, device, val_dataloader, batch_transformer)
+                new_test_loss = evaluate(model, device, val_dataloader, batch_transformer)
                 writer.add_scalar('Test/loss', new_test_loss, step)
 
                 # save checkpoint with best test loss
@@ -199,21 +211,21 @@ def main(args):
                             os.remove(args.checkpoint_dir / best_checkpoint_box_filename)
                     args.checkpoint_dir.mkdir(parents=True, exist_ok=True)
                     best_checkpoint_filename = "best_global_step_features" + str(step) +".pt"
-                    torch.save(visual_features, os.path.join(str(args.checkpoint_dir), best_checkpoint_filename))
+                    #torch.save(visual_features, os.path.join(str(args.checkpoint_dir), best_checkpoint_filename))
                     if args.model == "lxmert":
                         best_checkpoint_box_filename = "best_global_step_boxes" + str(step) +".pt"
-                        torch.save(visual_boxes, os.path.join(str(args.checkpoint_dir), best_checkpoint_box_filename))
+                        #torch.save(visual_boxes, os.path.join(str(args.checkpoint_dir), best_checkpoint_box_filename))
                     best_test_loss = new_test_loss
 
                 model.train()
 
 
 @torch.no_grad()
-def evaluate(model, visual_features, visual_boxes, device, test_dataloader, batch_transformer):
+def evaluate(model, device, test_dataloader, batch_transformer):
     losses = []  # List of scalar tensors
     for batch in tqdm(test_dataloader):
         # adapt batch to model
-        batch = batch_transformer(batch, visual_features, visual_boxes)
+        #batch = batch_transformer(batch, visual_features, visual_boxes)
         batch = {k: v.to(device) for k, v in batch.items()}
         output = model(**batch)
         losses.append(output.loss)
