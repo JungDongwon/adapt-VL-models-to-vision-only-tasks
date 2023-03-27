@@ -22,7 +22,7 @@ class ImageDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         text = self.text
-        image = self.image_files[idx]['img']
+        image = self.image_files[idx]['image']
         label = self.image_files[idx]['label']
         if image.mode != "RGB":
             image = image.convert("RGB")
@@ -54,7 +54,7 @@ def collate_fn(batch):
     return batch
 
 @torch.no_grad()
-def evaluate(model, device, test_dataloader, step):
+def evaluate(model, device, test_dataloader):
     losses = []  # List of scalar tensors
     correct = 0
     total = 0
@@ -71,7 +71,6 @@ def evaluate(model, device, test_dataloader, step):
     stacked_losses = torch.stack(losses)  # (num_batches, ) 
     total_avg_loss = stacked_losses.mean()  # (num test examples, ) -> scalar
     total_avg_acc = (100 * correct) / total
-    logger.info(f"Eval at step {step}")
     logger.info(f"Correct: {correct} / Total: {total}")
     logger.info(f"Average val loss: {total_avg_loss.item()}")
     logger.info(f"Average val acc: {total_avg_acc}")
@@ -82,16 +81,17 @@ if __name__ == "__main__":
 
     cache_dir='./cache'
     checkpoint_dir = './checkpoints'
+    dataset = 'tiny_imagenet'
     os.makedirs(cache_dir, exist_ok=True)
     os.makedirs(checkpoint_dir, exist_ok=True)
-    logging.basicConfig(filename="log.txt", 
+    logging.basicConfig(filename=dataset+".txt", 
                         level=logging.INFO,
 					    format='%(asctime)s %(message)s', 
 					    filemode='w') 
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    #datasets = load_dataset('Maysee/tiny-imagenet', cache_dir=cache_dir)
-    datasets = load_dataset('cifar10', cache_dir=cache_dir)
+    device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+    datasets = load_dataset('Maysee/tiny-imagenet', cache_dir=cache_dir)
+    #datasets = load_dataset('cifar10', cache_dir=cache_dir)
     label_list = datasets["train"].features["label"].names
     num_labels = len(label_list)
 
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     processor = ViltProcessor.from_pretrained("dandelin/vilt-b32-finetuned-vqa")
 
     train_dataset = ImageDataset(image_files=datasets["train"], text="", processor=processor, num_labels=num_labels)
-    test_dataset = ImageDataset(image_files=datasets["test"], text="", processor=processor, num_labels=num_labels)
+    test_dataset = ImageDataset(image_files=datasets["valid"], text="", processor=processor, num_labels=num_labels)
 
     model = ViltForQuestionAnswering.from_pretrained("dandelin/vilt-b32-mlm", config=config)
     model.to(device)
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     patience = 0
     model.train()
     for epoch in range(50):  # loop over the dataset multiple times
-        logger.info(f"Epoch: {epoch}")
+        logger.info(f"Train Epoch: {epoch}")
         for batch in tqdm(train_dataloader):
             step += 1
             # get the inputs; 
@@ -141,27 +141,26 @@ if __name__ == "__main__":
             loss.backward()
             optimizer.step()
 
-            # Evaluate
-            if step != 0 and step % 20 == 0:
-                model.eval()
-                logger.info(f"Evaluate step: {step}")
-                new_test_loss, new_test_acc = evaluate(model, device, test_dataloader, step)
-                # save checkpoint with best test loss
-                if new_test_acc > best_test_acc or best_test_acc < 0:
-                    patience = 0
-                    if best_test_acc > 0:
-                        os.remove(checkpoint_dir + '/'+ best_checkpoint_filename)
-                    best_checkpoint_filename = "best_model" + str(step) +".pt"
-                    torch.save(model.state_dict(), checkpoint_dir + '/' + best_checkpoint_filename)
-                    best_test_acc = new_test_acc
-                    logger.info(f"Best test acc: {best_test_acc}")
-                    logger.info(f"Best model saved at {checkpoint_dir + '/' + best_checkpoint_filename}")
-                else:
-                    patience += 1
-                    if patience > 3:
-                        logger.info(f"Early stopping at step {step}")
-                        break
 
-                model.train()
+        model.eval()
+        logger.info(f"Evaluate Epoch: {epoch}")
+        new_test_loss, new_test_acc = evaluate(model, device, test_dataloader)
+        # save checkpoint with best test loss
+        if new_test_acc > best_test_acc or best_test_acc < 0:
+            patience = 0
+            if best_test_acc > 0:
+                os.remove(checkpoint_dir + '/'+ best_checkpoint_filename)
+            best_checkpoint_filename = dataset+"_best_model" + str(epoch) +".pt"
+            torch.save(model.state_dict(), checkpoint_dir + '/' + best_checkpoint_filename)
+            best_test_acc = new_test_acc
+            logger.info(f"Best test acc: {best_test_acc}")
+            logger.info(f"Best model saved at {checkpoint_dir + '/' + best_checkpoint_filename}")
+        else:
+            patience += 1
+            if patience > 3:
+                logger.info(f"Early stopping at epoch {epoch}")
+                break
+        model.train()
+
     logger.info(f"Best model acc {best_test_acc}")
     logger.shutdown()
