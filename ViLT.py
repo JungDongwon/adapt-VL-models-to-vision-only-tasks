@@ -22,8 +22,8 @@ class ImageDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         text = self.text
-        image = self.image_files[idx]['image']
-        label = self.image_files[idx]['label']
+        image = self.image_files[idx][image_name]
+        label = self.image_files[idx][label_name]
         if image.mode != "RGB":
             image = image.convert("RGB")
         encoding = self.processor(image, text, padding="max_length", truncation=True, return_tensors="pt")
@@ -81,18 +81,47 @@ if __name__ == "__main__":
 
     cache_dir='./cache'
     checkpoint_dir = './checkpoints'
-    dataset = 'tiny_imagenet'
+    log_dir='./logs/'
+
+    ######### MUST SET PROPERLY #########
+    dataset = 'cifar100'
+    dataset_name = dataset.split('/')[-1]
+
+    image_name = 'img'
+    label_name = 'fine_label'
+
+    trainset_name = 'train'
+    testset_name = 'test'
+
+    adaptation = ''
+    adaptation_name = 'no_text'
+    #####################################
+
+    ########## HYPERPARAMETERS ##########
+    train_batch_size = 512
+    test_batch_size = 512
+    lr = 5e-5
+    num_epochs = 50
+    max_patience = 1
+    #####################################
+
     os.makedirs(cache_dir, exist_ok=True)
     os.makedirs(checkpoint_dir, exist_ok=True)
-    logging.basicConfig(filename=dataset+".txt", 
+    os.makedirs(log_dir, exist_ok=True)
+    logging.basicConfig(filename=log_dir+dataset_name+'_'+adaptation_name+'.txt', 
                         level=logging.INFO,
 					    format='%(asctime)s %(message)s', 
 					    filemode='w') 
+    logger.info(f"train_batch_size: {train_batch_size}")
+    logger.info(f"test_batch_size: {test_batch_size}")
+    logger.info(f"lr: {lr}")
+    logger.info(f"num_epochs: {num_epochs}")
+    logger.info(f"max_patience: {max_patience}")
 
-    device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
-    datasets = load_dataset('Maysee/tiny-imagenet', cache_dir=cache_dir)
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    datasets = load_dataset(dataset, cache_dir=cache_dir)
     #datasets = load_dataset('cifar10', cache_dir=cache_dir)
-    label_list = datasets["train"].features["label"].names
+    label_list = datasets["train"].features[label_name].names
     num_labels = len(label_list)
 
     config = ViltConfig.from_pretrained("dandelin/vilt-b32-finetuned-vqa", cache_dir=cache_dir)
@@ -102,8 +131,8 @@ if __name__ == "__main__":
 
     processor = ViltProcessor.from_pretrained("dandelin/vilt-b32-finetuned-vqa")
 
-    train_dataset = ImageDataset(image_files=datasets["train"], text="", processor=processor, num_labels=num_labels)
-    test_dataset = ImageDataset(image_files=datasets["valid"], text="", processor=processor, num_labels=num_labels)
+    train_dataset = ImageDataset(image_files=datasets[trainset_name], text=adaptation, processor=processor, num_labels=num_labels)
+    test_dataset = ImageDataset(image_files=datasets[testset_name], text=adaptation, processor=processor, num_labels=num_labels)
 
     model = ViltForQuestionAnswering.from_pretrained("dandelin/vilt-b32-mlm", config=config)
     model.to(device)
@@ -113,15 +142,15 @@ if __name__ == "__main__":
         if 'classifier' in name or 'pooler' in name:
             param.requires_grad = True
 
-    train_dataloader = DataLoader(train_dataset, collate_fn=collate_fn, batch_size=512, shuffle=True)
-    test_dataloader = DataLoader(test_dataset, collate_fn=collate_fn, batch_size=512, shuffle=True)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-5)
+    train_dataloader = DataLoader(train_dataset, collate_fn=collate_fn, batch_size=train_batch_size, shuffle=True)
+    test_dataloader = DataLoader(test_dataset, collate_fn=collate_fn, batch_size=test_batch_size, shuffle=True)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     best_test_acc = -1
     step = -1
     patience = 0
     model.train()
-    for epoch in range(50):  # loop over the dataset multiple times
+    for epoch in range(num_epochs):  # loop over the dataset multiple times
         logger.info(f"Train Epoch: {epoch}")
         for batch in tqdm(train_dataloader):
             step += 1
@@ -150,17 +179,17 @@ if __name__ == "__main__":
             patience = 0
             if best_test_acc > 0:
                 os.remove(checkpoint_dir + '/'+ best_checkpoint_filename)
-            best_checkpoint_filename = dataset+"_best_model" + str(epoch) +".pt"
+            best_checkpoint_filename = dataset_name+"_best_model" + str(epoch) +".pt"
             torch.save(model.state_dict(), checkpoint_dir + '/' + best_checkpoint_filename)
             best_test_acc = new_test_acc
             logger.info(f"Best test acc: {best_test_acc}")
             logger.info(f"Best model saved at {checkpoint_dir + '/' + best_checkpoint_filename}")
         else:
             patience += 1
-            if patience > 3:
+            if patience > max_patience:
                 logger.info(f"Early stopping at epoch {epoch}")
                 break
         model.train()
 
     logger.info(f"Best model acc {best_test_acc}")
-    logger.shutdown()
+    logger.info("Finished Training!")
