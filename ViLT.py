@@ -122,7 +122,7 @@ if __name__ == "__main__":
     patience = 0
     model.train()
     for epoch in range(50):  # loop over the dataset multiple times
-        print(f"Epoch: {epoch}")
+        logger.info(f"Epoch: {epoch}")
         for batch in tqdm(train_dataloader):
             step += 1
             # get the inputs; 
