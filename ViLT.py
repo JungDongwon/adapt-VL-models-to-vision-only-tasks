@@ -84,16 +84,20 @@ if __name__ == "__main__":
     log_dir='./logs/'
 
     ######### MUST SET PROPERLY #########
-    dataset = 'cifar100'
+    device_no = 'cuda:3'
+
+    dataset = 'cifar10'
     dataset_name = dataset.split('/')[-1]
 
     image_name = 'img'
-    label_name = 'fine_label'
+    label_name = 'label'
 
     trainset_name = 'train'
     testset_name = 'test'
 
+    #adaptation = 'What is this image?'
     adaptation = ''
+    #adaptation_name = 'question'
     adaptation_name = 'no_text'
     #####################################
 
@@ -108,7 +112,7 @@ if __name__ == "__main__":
     os.makedirs(cache_dir, exist_ok=True)
     os.makedirs(checkpoint_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
-    logging.basicConfig(filename=log_dir+dataset_name+'_'+adaptation_name+'.txt', 
+    logging.basicConfig(filename=log_dir+'ViLT_'+dataset_name+'_'+adaptation_name+'.txt', 
                         level=logging.INFO,
 					    format='%(asctime)s %(message)s', 
 					    filemode='w') 
@@ -118,7 +122,7 @@ if __name__ == "__main__":
     logger.info(f"num_epochs: {num_epochs}")
     logger.info(f"max_patience: {max_patience}")
 
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    device = torch.device(device_no if torch.cuda.is_available() else "cpu")
     datasets = load_dataset(dataset, cache_dir=cache_dir)
     #datasets = load_dataset('cifar10', cache_dir=cache_dir)
     label_list = datasets["train"].features[label_name].names
@@ -179,7 +183,7 @@ if __name__ == "__main__":
             patience = 0
             if best_test_acc > 0:
                 os.remove(checkpoint_dir + '/'+ best_checkpoint_filename)
-            best_checkpoint_filename = dataset_name+"_best_model" + str(epoch) +".pt"
+            best_checkpoint_filename = 'ViLT_'+dataset_name+'_'+adaptation_name+'_'+str(epoch) +".pt"
             torch.save(model.state_dict(), checkpoint_dir + '/' + best_checkpoint_filename)
             best_test_acc = new_test_acc
             logger.info(f"Best test acc: {best_test_acc}")

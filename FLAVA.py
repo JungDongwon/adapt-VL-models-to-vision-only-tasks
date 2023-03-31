@@ -90,6 +90,8 @@ if __name__ == "__main__":
     log_dir='./logs/'
 
     ######### MUST SET PROPERLY #########
+    device_no = "cuda:0"
+
     dataset = 'cifar10'
     dataset_name = dataset.split('/')[-1]
 
@@ -99,7 +101,9 @@ if __name__ == "__main__":
     trainset_name = 'train'
     testset_name = 'test'
 
+    #adaptation = 'What is this image?'
     adaptation = ''
+    #adaptation_name = 'question'
     adaptation_name = 'no_text'
     #####################################
 
@@ -124,7 +128,7 @@ if __name__ == "__main__":
     logger.info(f"num_epochs: {num_epochs}")
     logger.info(f"max_patience: {max_patience}")
 
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    device = torch.device(device_no if torch.cuda.is_available() else "cpu")
     datasets = load_dataset(dataset, cache_dir=cache_dir)
     label_list = datasets["train"].features[label_name].names
     num_labels = len(label_list)
