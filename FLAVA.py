@@ -67,7 +67,7 @@ def evaluate(model, device, test_dataloader):
     for batch in tqdm(test_dataloader):
         # adapt batch to model
         batch = {k: v.to(device) for k, v in batch.items()}
-        outputs = model(**batch)
+        outputs = model(text = batch["input_ids"].to(device), image = batch["pixel_values"].to(device), labels = batch["labels"].to(device))
         logits = outputs.logits
         preds = torch.argmax(logits, dim=1)
         target = torch.argmax(batch['labels'], dim=1)
@@ -92,11 +92,11 @@ if __name__ == "__main__":
     ######### MUST SET PROPERLY #########
     device_no = "cuda:0"
 
-    dataset = 'cifar10'
+    dataset = 'cifar100'
     dataset_name = dataset.split('/')[-1]
 
     image_name = 'img'
-    label_name = 'label'
+    label_name = 'fine_label'
 
     trainset_name = 'train'
     testset_name = 'test'
