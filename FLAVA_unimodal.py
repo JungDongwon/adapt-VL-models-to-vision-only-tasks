@@ -1,5 +1,7 @@
-from transformers import ViltForQuestionAnswering, ViltConfig, ViltProcessor
+from transformers import ViltForQuestionAnswering, ViltConfig, ViltProcessor, BertTokenizer
+from torchmultimodal.models.flava.model import flava_model_for_classification
 from PIL import Image
+import torchvision.transforms as T
 import torch
 from datasets import load_dataset
 from torch.utils.data import DataLoader
@@ -11,9 +13,8 @@ logger = logging.getLogger(__name__)
 
 class ImageDataset(torch.utils.data.Dataset):
 
-    def __init__(self, image_files, text, processor, num_labels):
+    def __init__(self, image_files, processor, num_labels):
         self.image_files = image_files
-        self.text = text
         self.processor = processor
         self.num_labels = num_labels
 
@@ -21,12 +22,11 @@ class ImageDataset(torch.utils.data.Dataset):
         return len(self.image_files)
 
     def __getitem__(self, idx):
-        text = self.text
         image = self.image_files[idx][image_name]
         label = self.image_files[idx][label_name]
         if image.mode != "RGB":
             image = image.convert("RGB")
-        encoding = self.processor(image, text, padding="max_length", truncation=True, return_tensors="pt")
+        encoding = self.processor(image, '', padding="max_length", truncation=True, return_tensors="pt")
         # remove batch dimension
         for k,v in encoding.items():
             encoding[k] = v.squeeze()
@@ -34,23 +34,27 @@ class ImageDataset(torch.utils.data.Dataset):
         targets[label] = 1
         encoding["labels"] = targets
         return encoding
-    
+
 def collate_fn(batch):
+    transform = transform = T.Resize((224,224))
     input_ids = [item['input_ids'] for item in batch]
     pixel_values = [item['pixel_values'] for item in batch]
     attention_mask = [item['attention_mask'] for item in batch]
     token_type_ids = [item['token_type_ids'] for item in batch]
     labels = [item['labels'] for item in batch]
+
     # create padded pixel values and corresponding pixel mask
     encoding = processor.feature_extractor.pad_and_create_pixel_mask(pixel_values, return_tensors="pt")
+
     # create new batch
     batch = {}
     batch['input_ids'] = torch.stack(input_ids)
     batch['attention_mask'] = torch.stack(attention_mask)
     batch['token_type_ids'] = torch.stack(token_type_ids)
-    batch['pixel_values'] = encoding['pixel_values']
+    batch['pixel_values'] = transform(encoding['pixel_values'])
     batch['pixel_mask'] = encoding['pixel_mask']
     batch['labels'] = torch.stack(labels)
+
     return batch
 
 @torch.no_grad()
@@ -61,7 +65,7 @@ def evaluate(model, device, test_dataloader):
     for batch in tqdm(test_dataloader):
         # adapt batch to model
         batch = {k: v.to(device) for k, v in batch.items()}
-        outputs = model(**batch)
+        outputs = model(image = batch["pixel_values"].to(device), required_embedding="image", labels = batch["labels"].to(device))
         logits = outputs.logits
         preds = torch.argmax(logits, dim=1)
         target = torch.argmax(batch['labels'], dim=1)
@@ -84,30 +88,27 @@ if __name__ == "__main__":
     log_dir='./logs/'
 
     ######### MUST SET PROPERLY #########
-    device_no = 'cuda:3'
+    device_no = "cuda:1"
 
-    dataset = 'cifar100'
+    dataset = 'cifar10'
     dataset_name = dataset.split('/')[-1]
 
     image_name = 'img'
-    #label_name = 'label'
-    label_name = 'fine_label'
+    #label_name = 'fine_label'
+    label_name = 'label'
 
     trainset_name = 'train'
     testset_name = 'test'
 
     #adaptation = 'What is this image?'
-    #adaptation = ''
-    #adaptation = 'The image belongs to one of the following classes: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck.'
-    adaptation = 'The image belongs to one of the following classes: beaver, dolphin, otter, seal, whale ,aquarium fish, flatfish, ray, shark, trout, orchids, poppies, roses, sunflowers, tulips, bottles, bowls, cans, cups, plates, apples, mushrooms, oranges, pears, sweet peppers, clock, computer keyboard, lamp, telephone, television, bed, chair, couch, table, wardrobe, bee, beetle, butterfly, caterpillar, cockroach, bear, leopard, lion, tiger, wolf, bridge, castle, house, road, skyscraper, cloud, forest, mountain, plain, sea, camel, cattle, chimpanzee, elephant, kangaroo, fox, porcupine, possum, raccoon, skunk, crab, lobster, snail, spider, worm, baby, boy, girl, man, woman, crocodile, dinosaur, lizard, snake, turtle, hamster, mouse, rabbit, shrew, squirrel, maple, oak, palm, pine, willow, bicycle, bus, motorcycle, pickup truck, train, lawn-mower, rocket, streetcar, tank, tractor.'
+    adaptation = ''
     #adaptation_name = 'question'
-    #adaptation_name = 'no_text'
-    adaptation_name = 'class_names'
+    adaptation_name = 'no_text'
     #####################################
 
     ########## HYPERPARAMETERS ##########
-    train_batch_size = 512
-    test_batch_size = 512
+    train_batch_size = 64
+    test_batch_size = 64
     lr = 5e-5
     num_epochs = 50
     max_patience = 1
@@ -116,7 +117,7 @@ if __name__ == "__main__":
     os.makedirs(cache_dir, exist_ok=True)
     os.makedirs(checkpoint_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
-    logging.basicConfig(filename=log_dir+'ViLT_'+dataset_name+'_'+adaptation_name+'.txt', 
+    logging.basicConfig(filename=log_dir+'FLAVA_UNI_'+dataset_name+'_'+adaptation_name+'.txt', 
                         level=logging.INFO,
 					    format='%(asctime)s %(message)s', 
 					    filemode='w') 
@@ -128,21 +129,20 @@ if __name__ == "__main__":
 
     device = torch.device(device_no if torch.cuda.is_available() else "cpu")
     datasets = load_dataset(dataset, cache_dir=cache_dir)
-    #datasets = load_dataset('cifar10', cache_dir=cache_dir)
     label_list = datasets["train"].features[label_name].names
     num_labels = len(label_list)
 
-    config = ViltConfig.from_pretrained("dandelin/vilt-b32-finetuned-vqa", cache_dir=cache_dir)
-    config.id2label = {i: label for i, label in enumerate(label_list)}
-    config.label2id = {label: i for i, label in enumerate(label_list)}
+    config = BertTokenizer.from_pretrained("bert-base-uncased",padding="max_length", cache_dir=cache_dir)
+    config.id2label = {str(i): label for i, label in enumerate(label_list)}
+    config.label2id = {label: str(i) for i, label in enumerate(label_list)}
     config.num_labels = num_labels
 
     processor = ViltProcessor.from_pretrained("dandelin/vilt-b32-finetuned-vqa")
 
-    train_dataset = ImageDataset(image_files=datasets[trainset_name], text=adaptation, processor=processor, num_labels=num_labels)
-    test_dataset = ImageDataset(image_files=datasets[testset_name], text=adaptation, processor=processor, num_labels=num_labels)
+    train_dataset = ImageDataset(image_files=datasets[trainset_name], processor=processor, num_labels=num_labels)
+    test_dataset = ImageDataset(image_files=datasets[testset_name], processor=processor, num_labels=num_labels)
 
-    model = ViltForQuestionAnswering.from_pretrained("dandelin/vilt-b32-mlm", config=config)
+    model = flava_model_for_classification(num_classes=num_labels)
     model.to(device)
     for param in model.parameters():
         param.requires_grad = False
@@ -167,7 +167,7 @@ if __name__ == "__main__":
             # zero the parameter gradients
             optimizer.zero_grad()
             # forward + backward + optimize
-            outputs = model(**batch)
+            outputs = model(image = batch["pixel_values"].to(device), required_embedding="image", labels = batch["labels"].to(device))
             logits = outputs.logits
             preds = torch.argmax(logits, dim=1)
             target = torch.argmax(batch['labels'], dim=1)
@@ -187,7 +187,7 @@ if __name__ == "__main__":
             patience = 0
             if best_test_acc > 0:
                 os.remove(checkpoint_dir + '/'+ best_checkpoint_filename)
-            best_checkpoint_filename = 'ViLT_'+dataset_name+'_'+adaptation_name+'_'+str(epoch) +".pt"
+            best_checkpoint_filename = 'FLAVA_UNI_'+dataset_name+'_'+adaptation_name+'_'+str(epoch) +".pt"
             torch.save(model.state_dict(), checkpoint_dir + '/' + best_checkpoint_filename)
             best_test_acc = new_test_acc
             logger.info(f"Best test acc: {best_test_acc}")

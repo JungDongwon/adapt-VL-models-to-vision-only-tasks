@@ -90,21 +90,25 @@ if __name__ == "__main__":
     log_dir='./logs/'
 
     ######### MUST SET PROPERLY #########
-    device_no = "cuda:0"
+    device_no = "cuda:1"
 
-    dataset = 'cifar100'
+    dataset = 'cifar10'
     dataset_name = dataset.split('/')[-1]
 
     image_name = 'img'
-    label_name = 'fine_label'
+    #label_name = 'fine_label'
+    label_name = 'label'
 
     trainset_name = 'train'
     testset_name = 'test'
 
     #adaptation = 'What is this image?'
-    adaptation = ''
+    #adaptation = ''
+    #adaptation = 'The image belongs to one of the following classes: beaver, dolphin, otter, seal, whale ,aquarium fish, flatfish, ray, shark, trout, orchids, poppies, roses, sunflowers, tulips, bottles, bowls, cans, cups, plates, apples, mushrooms, oranges, pears, sweet peppers, clock, computer keyboard, lamp, telephone, television, bed, chair, couch, table, wardrobe, bee, beetle, butterfly, caterpillar, cockroach, bear, leopard, lion, tiger, wolf, bridge, castle, house, road, skyscraper, cloud, forest, mountain, plain, sea, camel, cattle, chimpanzee, elephant, kangaroo, fox, porcupine, possum, raccoon, skunk, crab, lobster, snail, spider, worm, baby, boy, girl, man, woman, crocodile, dinosaur, lizard, snake, turtle, hamster, mouse, rabbit, shrew, squirrel, maple, oak, palm, pine, willow, bicycle, bus, motorcycle, pickup truck, train, lawn-mower, rocket, streetcar, tank, tractor.'
+    adaptation = 'The image belongs to one of the following classes: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck.'
     #adaptation_name = 'question'
-    adaptation_name = 'no_text'
+    #adaptation_name = 'no_text'
+    adaptation_name = 'class_names'
     #####################################
 
     ########## HYPERPARAMETERS ##########
