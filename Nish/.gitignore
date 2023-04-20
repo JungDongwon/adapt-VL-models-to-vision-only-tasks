@@ -2,3 +2,6 @@ tiny-imagenet-200/**
 cache/**
 *.pkl
 *.pth
+
+.ipynb_checkpoints/
+__pycache__/
