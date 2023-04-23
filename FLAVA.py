@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from tqdm.notebook import tqdm
 import os
 import logging
+import argparse
 
 logger = logging.getLogger(__name__)
 
@@ -84,40 +85,59 @@ def evaluate(model, device, test_dataloader):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--device_num", default=0, type=int)
+    parser.add_argument("--cache_dir", default="./cache")
+    parser.add_argument("--checkpoint_dir", default="./checkpoints")
+    parser.add_argument("--log_dir", default="./logs/")
+    parser.add_argument("--dataset", default="cifar10", choices=["cifar10", "cifar100"]) 
+    parser.add_argument("--adaptation_name", default="no_text", choices=["no_text", "question", "class_names", "task_description"])
+    parser.add_argument("--train_batch_size", default=64, type=int) 
+    parser.add_argument("--test_batch_size", default=64, type=int) 
+    parser.add_argument("--lr", default=5e-5, type=float) 
+    parser.add_argument("--num_epochs", default=50, type=int)
+    parser.add_argument("--max_patience", default=1, type=int)
 
-    cache_dir='./cache'
-    checkpoint_dir = './checkpoints'
-    log_dir='./logs/'
+    args = parser.parse_args()
 
-    ######### MUST SET PROPERLY #########
-    device_no = "cuda:1"
-
-    dataset = 'cifar10'
+    cache_dir=args.cache_dir
+    checkpoint_dir = args.checkpoint_dir
+    log_dir = args.log_dir
+    device = "cuda:"+str(args.device_num)
+    dataset = args.dataset
     dataset_name = dataset.split('/')[-1]
+    adaptation_name = args.adaptation_name
+    train_batch_size = args.train_batch_size
+    test_batch_size = args.test_batch_size
+    lr = args.lr
+    num_epochs = args.num_epochs
+    max_patience = args.max_patience
 
-    image_name = 'img'
-    #label_name = 'fine_label'
-    label_name = 'label'
+    if dataset_name == 'cifar10':
+        image_name = 'img'
+        label_name = 'label'
+        trainset_name = 'train'
+        testset_name = 'test'
+    elif dataset_name == 'cifar100':
+        image_name = 'img'
+        label_name = 'fine_label'
+        trainset_name = 'train'
+        testset_name = 'test'
 
-    trainset_name = 'train'
-    testset_name = 'test'
-
-    #adaptation = 'What is this image?'
-    #adaptation = ''
-    #adaptation = 'The image belongs to one of the following classes: beaver, dolphin, otter, seal, whale ,aquarium fish, flatfish, ray, shark, trout, orchids, poppies, roses, sunflowers, tulips, bottles, bowls, cans, cups, plates, apples, mushrooms, oranges, pears, sweet peppers, clock, computer keyboard, lamp, telephone, television, bed, chair, couch, table, wardrobe, bee, beetle, butterfly, caterpillar, cockroach, bear, leopard, lion, tiger, wolf, bridge, castle, house, road, skyscraper, cloud, forest, mountain, plain, sea, camel, cattle, chimpanzee, elephant, kangaroo, fox, porcupine, possum, raccoon, skunk, crab, lobster, snail, spider, worm, baby, boy, girl, man, woman, crocodile, dinosaur, lizard, snake, turtle, hamster, mouse, rabbit, shrew, squirrel, maple, oak, palm, pine, willow, bicycle, bus, motorcycle, pickup truck, train, lawn-mower, rocket, streetcar, tank, tractor.'
-    adaptation = 'The image belongs to one of the following classes: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck.'
-    #adaptation_name = 'question'
-    #adaptation_name = 'no_text'
-    adaptation_name = 'class_names'
-    #####################################
-
-    ########## HYPERPARAMETERS ##########
-    train_batch_size = 64
-    test_batch_size = 64
-    lr = 5e-5
-    num_epochs = 50
-    max_patience = 1
-    #####################################
+    if adaptation_name == 'no_text':
+        adaptation = ''
+    elif adaptation_name == 'question':
+        adaptation = 'What is this image?'
+    elif adaptation_name == 'class_names':
+        if dataset_name == 'cifar10':
+            adaptation = 'The image belongs to one of the following classes: airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck.'
+        elif dataset_name == 'cifar100':
+            adaptation = adaptation = 'The image belongs to one of the following classes: beaver, dolphin, otter, seal, whale ,aquarium fish, flatfish, ray, shark, trout, orchids, poppies, roses, sunflowers, tulips, bottles, bowls, cans, cups, plates, apples, mushrooms, oranges, pears, sweet peppers, clock, computer keyboard, lamp, telephone, television, bed, chair, couch, table, wardrobe, bee, beetle, butterfly, caterpillar, cockroach, bear, leopard, lion, tiger, wolf, bridge, castle, house, road, skyscraper, cloud, forest, mountain, plain, sea, camel, cattle, chimpanzee, elephant, kangaroo, fox, porcupine, possum, raccoon, skunk, crab, lobster, snail, spider, worm, baby, boy, girl, man, woman, crocodile, dinosaur, lizard, snake, turtle, hamster, mouse, rabbit, shrew, squirrel, maple, oak, palm, pine, willow, bicycle, bus, motorcycle, pickup truck, train, lawn-mower, rocket, streetcar, tank, tractor.'
+    elif adaptation_name == 'task_description':
+        if dataset_name == 'cifar10':
+            adaptation = "This is a classification problem from the cifar10 dataset. Classifiy the images amongst the classes 'airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', and 'truck'."
+        elif dataset_name == 'cifar100':
+            adaptation = adaptation = "This is a classification problem from the cifar100 dataset. Classifiy the images amongst the classes 'beaver', 'dolphin', 'otter', 'seal', 'whale', 'aquarium fish', 'flatfish', 'ray', 'shark', 'trout', 'orchids', 'poppies', 'roses', 'sunflowers', 'tulips', 'bottles', 'bowls', 'cans', 'cups', 'plates', 'apples', 'mushrooms', 'oranges', 'pears', 'sweet peppers', 'clock', 'computer keyboard', 'lamp', 'telephone', 'television', 'bed', 'chair', 'couch', 'table', 'wardrobe', 'bee', 'beetle', 'butterfly', 'caterpillar', 'cockroach', 'bear', 'leopard', 'lion', 'tiger', 'wolf', 'bridge', 'castle', 'house', 'road', 'skyscraper', 'cloud', 'forest', 'mountain', 'plain', 'sea', 'camel', 'cattle', 'chimpanzee', 'elephant', 'kangaroo', 'fox', 'porcupine', 'possum', 'raccoon', 'skunk', 'crab', 'lobster', 'snail', 'spider', 'worm', 'baby', 'boy', 'girl', 'man', 'woman', 'crocodile', 'dinosaur', 'lizard', 'snake', 'turtle', 'hamster', 'mouse', 'rabbit', 'shrew', 'squirrel', 'maple', 'oak', 'palm', 'pine', 'willow', 'bicycle', 'bus', 'motorcycle', 'pickup truck', 'train', 'lawn-mower', 'rocket', 'streetcar', 'tank', 'tractor'."
 
     os.makedirs(cache_dir, exist_ok=True)
     os.makedirs(checkpoint_dir, exist_ok=True)
@@ -132,7 +152,7 @@ if __name__ == "__main__":
     logger.info(f"num_epochs: {num_epochs}")
     logger.info(f"max_patience: {max_patience}")
 
-    device = torch.device(device_no if torch.cuda.is_available() else "cpu")
+    device = torch.device(device if torch.cuda.is_available() else "cpu")
     datasets = load_dataset(dataset, cache_dir=cache_dir)
     label_list = datasets["train"].features[label_name].names
     num_labels = len(label_list)

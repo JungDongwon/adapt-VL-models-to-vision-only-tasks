@@ -1,9 +1,13 @@
-from transformers import ViltForQuestionAnswering, ViltConfig, ViltProcessor
-from PIL import Image
 import torch
-from datasets import load_dataset
-from torch.utils.data import DataLoader
-from tqdm.notebook import tqdm
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
+from sklearn.model_selection import train_test_split
+import tqdm
+from sklearn.metrics import accuracy_score
+import numpy as np
+from datasets import load_dataset, Image
+from transformers import BlipForQuestionAnswering, BlipProcessor, BlipConfig, BlipModel
 import os
 import logging
 import argparse
@@ -40,35 +44,34 @@ def collate_fn(batch):
     input_ids = [item['input_ids'] for item in batch]
     pixel_values = [item['pixel_values'] for item in batch]
     attention_mask = [item['attention_mask'] for item in batch]
-    token_type_ids = [item['token_type_ids'] for item in batch]
     labels = [item['labels'] for item in batch]
-    # create padded pixel values and corresponding pixel mask
-    encoding = processor.feature_extractor.pad_and_create_pixel_mask(pixel_values, return_tensors="pt")
     # create new batch
     batch = {}
     batch['input_ids'] = torch.stack(input_ids)
     batch['attention_mask'] = torch.stack(attention_mask)
-    batch['token_type_ids'] = torch.stack(token_type_ids)
-    batch['pixel_values'] = encoding['pixel_values']
-    batch['pixel_mask'] = encoding['pixel_mask']
     batch['labels'] = torch.stack(labels)
     return batch
 
 @torch.no_grad()
-def evaluate(model, device, test_dataloader):
+def evaluate(blip_model, cls_model, device, test_dataloader):
     losses = []  # List of scalar tensors
     correct = 0
     total = 0
     for batch in tqdm(test_dataloader):
-        # adapt batch to model
-        batch = {k: v.to(device) for k, v in batch.items()}
-        outputs = model(**batch)
-        logits = outputs.logits
+        batch = {k:v.to(device) for k,v in batch.items()}
+        outputs = blip_model.generate(**batch)  
+        outputs = outputs[:,1]
+        outputs = nn.functional.one_hot(outputs, num_classes = blip_model.text_decoder.config.vocab_size).type(torch.FloatTensor)
+        outputs = outputs.to(device)
+        labels = batch['labels']
+        logits = cls_model(outputs)
+        loss = criterion(logits, labels)
         preds = torch.argmax(logits, dim=1)
-        target = torch.argmax(batch['labels'], dim=1)
+        target = torch.argmax(labels, dim=1)
         correct += torch.sum(preds==target).item()
         total += target.size(0)
-        losses.append(outputs.loss)
+        losses.append(loss)
+
     stacked_losses = torch.stack(losses)  # (num_batches, ) 
     total_avg_loss = stacked_losses.mean()  # (num test examples, ) -> scalar
     total_avg_acc = (100 * correct) / total
@@ -76,7 +79,6 @@ def evaluate(model, device, test_dataloader):
     logger.info(f"Average val loss: {total_avg_loss.item()}")
     logger.info(f"Average val acc: {total_avg_acc}")
     return total_avg_loss.item(), total_avg_acc
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -86,8 +88,8 @@ if __name__ == "__main__":
     parser.add_argument("--log_dir", default="./logs/")
     parser.add_argument("--dataset", default="cifar10", choices=["cifar10", "cifar100"]) 
     parser.add_argument("--adaptation_name", default="no_text", choices=["no_text", "question", "class_names", "task_description"])
-    parser.add_argument("--train_batch_size", default=512, type=int) 
-    parser.add_argument("--test_batch_size", default=512, type=int) 
+    parser.add_argument("--train_batch_size", default=128, type=int) 
+    parser.add_argument("--test_batch_size", default=128, type=int) 
     parser.add_argument("--lr", default=5e-5, type=float) 
     parser.add_argument("--num_epochs", default=50, type=int)
     parser.add_argument("--max_patience", default=1, type=int)
@@ -136,7 +138,7 @@ if __name__ == "__main__":
     os.makedirs(cache_dir, exist_ok=True)
     os.makedirs(checkpoint_dir, exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
-    logging.basicConfig(filename=log_dir+'ViLT_'+dataset_name+'_'+adaptation_name+'.txt', 
+    logging.basicConfig(filename=log_dir+'BLIP_'+dataset_name+'_'+adaptation_name+'.txt', 
                         level=logging.INFO,
 					    format='%(asctime)s %(message)s', 
 					    filemode='w') 
@@ -152,63 +154,71 @@ if __name__ == "__main__":
     label_list = datasets["train"].features[label_name].names
     num_labels = len(label_list)
 
-    config = ViltConfig.from_pretrained("dandelin/vilt-b32-finetuned-vqa", cache_dir=cache_dir)
-    config.id2label = {i: label for i, label in enumerate(label_list)}
-    config.label2id = {label: i for i, label in enumerate(label_list)}
+    config = BlipConfig.from_pretrained("Salesforce/blip-vqa-base")
+    config.id2label = {str(i): label for i, label in enumerate(label_list)}
+    config.label2id = {label: str(i) for i, label in enumerate(label_list)}
     config.num_labels = num_labels
+    config.max_length = 1
+    config.text_config.max_length = 1
 
-    processor = ViltProcessor.from_pretrained("dandelin/vilt-b32-finetuned-vqa")
+    processor = BlipProcessor.from_pretrained("Salesforce/blip-vqa-base")
 
     train_dataset = ImageDataset(image_files=datasets[trainset_name], text=adaptation, processor=processor, num_labels=num_labels)
     test_dataset = ImageDataset(image_files=datasets[testset_name], text=adaptation, processor=processor, num_labels=num_labels)
 
-    model = ViltForQuestionAnswering.from_pretrained("dandelin/vilt-b32-mlm", config=config)
-    model.to(device)
-    for param in model.parameters():
-        param.requires_grad = False
-    for name, param in model.named_parameters():
-        if 'classifier' in name or 'pooler' in name:
-            param.requires_grad = True
-
     train_dataloader = DataLoader(train_dataset, collate_fn=collate_fn, batch_size=train_batch_size, shuffle=True)
     test_dataloader = DataLoader(test_dataset, collate_fn=collate_fn, batch_size=test_batch_size, shuffle=True)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+
+    blip_model = BlipForQuestionAnswering.from_pretrained("Salesforce/blip-vqa-base", config=config)
+    blip_model = blip_model.to(device)
+    for name, param in blip_model.named_parameters():
+        param.requires_grad = False
+
+    # Since the output of BLIP is generation of text, we need to add a linear layer on top of the BLIP model to classify the text into the desired labels
+    cls_model = nn.Sequential(
+        nn.Linear(in_features=blip_model.text_decoder.config.vocab_size, out_features=num_labels, bias=True)
+    )
+    cls_model = cls_model.to(device)
+    optimizer = torch.optim.AdamW(cls_model.parameters(), lr=lr)
+    criterion = nn.CrossEntropyLoss()
 
     best_test_acc = -1
     step = -1
     patience = 0
-    model.train()
+    blip_model.train()
+    cls_model.train()
     for epoch in range(num_epochs):  # loop over the dataset multiple times
         logger.info(f"Train Epoch: {epoch}")
         for batch in tqdm(train_dataloader):
             step += 1
-            # get the inputs; 
             batch = {k:v.to(device) for k,v in batch.items()}
-            # zero the parameter gradients
             optimizer.zero_grad()
-            # forward + backward + optimize
-            outputs = model(**batch)
-            logits = outputs.logits
+            outputs = blip_model.generate(**batch)  
+            outputs = outputs[:,1]
+            outputs = nn.functional.one_hot(outputs, num_classes = blip_model.text_decoder.config.vocab_size).type(torch.FloatTensor)
+            outputs = outputs.to(device)
+            labels = batch['labels']
+            logits = cls_model(outputs)
+            loss = criterion(logits, labels)
             preds = torch.argmax(logits, dim=1)
-            target = torch.argmax(batch['labels'], dim=1)
+            target = torch.argmax(labels, dim=1)
             correct = torch.sum(preds==target).item()
             acc = (correct * 100) / target.size(0)
-            loss = outputs.loss
             logger.info(f"Step {step} - loss: {loss.item()} , train acc: {acc}")
             loss.backward()
             optimizer.step()
 
-
-        model.eval()
+        blip_model.eval()
+        cls_model.eval()
         logger.info(f"Evaluate Epoch: {epoch}")
-        new_test_loss, new_test_acc = evaluate(model, device, test_dataloader)
+        new_test_loss, new_test_acc = evaluate(blip_model, cls_model, device, test_dataloader)
         # save checkpoint with best test loss
         if new_test_acc > best_test_acc or best_test_acc < 0:
             patience = 0
             if best_test_acc > 0:
                 os.remove(checkpoint_dir + '/'+ best_checkpoint_filename)
-            best_checkpoint_filename = 'ViLT_'+dataset_name+'_'+adaptation_name+'_'+str(epoch) +".pt"
-            torch.save(model.state_dict(), checkpoint_dir + '/' + best_checkpoint_filename)
+            best_checkpoint_filename = 'BLIP_'+dataset_name+'_'+adaptation_name+'_'+str(epoch) +".pt"
+            torch.save(cls_model.state_dict(), checkpoint_dir + '/' + best_checkpoint_filename)
             best_test_acc = new_test_acc
             logger.info(f"Best test acc: {best_test_acc}")
             logger.info(f"Best model saved at {checkpoint_dir + '/' + best_checkpoint_filename}")
@@ -217,7 +227,5 @@ if __name__ == "__main__":
             if patience > max_patience:
                 logger.info(f"Early stopping at epoch {epoch}")
                 break
-        model.train()
-
-    logger.info(f"Best model acc {best_test_acc}")
-    logger.info("Finished Training!")
+        blip_model.train()
+        cls_model.train()
