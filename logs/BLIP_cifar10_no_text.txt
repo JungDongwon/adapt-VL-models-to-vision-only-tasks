@@ -1,0 +1,28 @@
+2023-04-24 09:48:05,592 train_batch_size: 32
+2023-04-24 09:48:05,592 test_batch_size: 32
+2023-04-24 09:48:05,592 lr: 5e-05
+2023-04-24 09:48:05,592 num_epochs: 50
+2023-04-24 09:48:05,592 max_patience: 1
+2023-04-24 09:48:06,349 Found cached dataset cifar10 (/home/dongwon/adapt-VL-models-to-vision-only-tasks/./cache/cifar10/plain_text/1.0.0/447d6ec4733dddd1ce3bb577c7166b986eaa4c538dcd9e805ba61f35674a9de4)
+2023-04-24 09:48:13,165 Train Epoch: 0
+2023-04-24 10:14:32,666 Evaluate Epoch: 0
+2023-04-24 10:18:10,518 Average val acc: 94.43889776357827
+2023-04-24 10:18:32,113 Best test acc: 94.43889776357827
+2023-04-24 10:18:32,114 Best model saved at ./checkpoints/BLIP_cifar10_no_text_0.pt
+2023-04-24 10:18:32,116 Train Epoch: 1
+2023-04-24 10:44:47,604 Evaluate Epoch: 1
+2023-04-24 10:48:26,970 Average val acc: 94.75838658146965
+2023-04-24 10:48:28,636 Best test acc: 94.75838658146965
+2023-04-24 10:48:28,636 Best model saved at ./checkpoints/BLIP_cifar10_no_text_1.pt
+2023-04-24 10:48:28,640 Train Epoch: 2
+2023-04-24 11:14:40,758 Evaluate Epoch: 2
+2023-04-24 11:18:22,620 Average val acc: 95.10782747603834
+2023-04-24 11:18:24,396 Best test acc: 95.10782747603834
+2023-04-24 11:18:24,397 Best model saved at ./checkpoints/BLIP_cifar10_no_text_2.pt
+2023-04-24 11:18:24,399 Train Epoch: 3
+2023-04-24 11:44:31,167 Evaluate Epoch: 3
+2023-04-24 11:48:11,713 Average val acc: 94.98801916932908
+2023-04-24 11:48:11,715 Train Epoch: 4
+2023-04-24 12:14:17,041 Evaluate Epoch: 4
+2023-04-24 12:17:57,617 Average val acc: 95.06789137380191
+2023-04-24 12:17:57,617 Early stopping at epoch 4

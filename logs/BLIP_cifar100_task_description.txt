@@ -1,0 +1,41 @@
+2023-04-24 19:02:10,008 train_batch_size: 32
+2023-04-24 19:02:10,008 test_batch_size: 32
+2023-04-24 19:02:10,008 lr: 5e-05
+2023-04-24 19:02:10,008 num_epochs: 50
+2023-04-24 19:02:10,008 max_patience: 1
+2023-04-24 19:02:10,825 Found cached dataset cifar100 (/home/dongwon/adapt-VL-models-to-vision-only-tasks/./cache/cifar100/cifar100/1.0.0/f365c8b725c23e8f0f8d725c3641234d9331cd2f62919d1381d1baa5b3ba3142)
+2023-04-24 19:02:17,562 Train Epoch: 0
+2023-04-24 19:41:43,802 Evaluate Epoch: 0
+2023-04-24 19:47:35,592 Average val acc: 33.6361821086262
+2023-04-24 19:47:37,013 Best test acc: 33.6361821086262
+2023-04-24 19:47:37,013 Best model saved at ./checkpoints/BLIP_cifar100_task_description_0.pt
+2023-04-24 19:47:37,016 Train Epoch: 1
+2023-04-24 20:25:46,730 Evaluate Epoch: 1
+2023-04-24 20:31:39,462 Average val acc: 41.47364217252396
+2023-04-24 20:31:40,996 Best test acc: 41.47364217252396
+2023-04-24 20:31:40,996 Best model saved at ./checkpoints/BLIP_cifar100_task_description_1.pt
+2023-04-24 20:31:40,999 Train Epoch: 2
+2023-04-24 21:09:48,279 Evaluate Epoch: 2
+2023-04-24 21:15:41,520 Average val acc: 40.9944089456869
+2023-04-24 21:15:41,522 Train Epoch: 3
+2023-04-24 21:54:05,218 Evaluate Epoch: 3
+2023-04-24 21:59:59,336 Average val acc: 44.578674121405754
+2023-04-24 22:00:00,866 Best test acc: 44.578674121405754
+2023-04-24 22:00:00,866 Best model saved at ./checkpoints/BLIP_cifar100_task_description_3.pt
+2023-04-24 22:00:00,868 Train Epoch: 4
+2023-04-24 22:38:27,662 Evaluate Epoch: 4
+2023-04-24 22:44:20,437 Average val acc: 46.11621405750799
+2023-04-24 22:44:21,976 Best test acc: 46.11621405750799
+2023-04-24 22:44:21,976 Best model saved at ./checkpoints/BLIP_cifar100_task_description_4.pt
+2023-04-24 22:44:21,979 Train Epoch: 5
+2023-04-24 23:22:36,016 Evaluate Epoch: 5
+2023-04-24 23:28:27,287 Average val acc: 47.83346645367412
+2023-04-24 23:28:28,865 Best test acc: 47.83346645367412
+2023-04-24 23:28:28,865 Best model saved at ./checkpoints/BLIP_cifar100_task_description_5.pt
+2023-04-24 23:28:28,867 Train Epoch: 6
+2023-04-25 00:06:44,022 Evaluate Epoch: 6
+2023-04-25 00:12:35,705 Average val acc: 47.41413738019169
+2023-04-25 00:12:35,707 Train Epoch: 7
+2023-04-25 00:50:48,908 Evaluate Epoch: 7
+2023-04-25 00:56:40,379 Average val acc: 47.23442492012779
+2023-04-25 00:56:40,379 Early stopping at epoch 7

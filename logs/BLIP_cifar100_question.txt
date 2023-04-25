@@ -1,0 +1,53 @@
+2023-04-24 09:47:24,962 train_batch_size: 32
+2023-04-24 09:47:24,962 test_batch_size: 32
+2023-04-24 09:47:24,962 lr: 5e-05
+2023-04-24 09:47:24,962 num_epochs: 50
+2023-04-24 09:47:24,962 max_patience: 1
+2023-04-24 09:47:25,770 Found cached dataset cifar100 (/home/dongwon/adapt-VL-models-to-vision-only-tasks/./cache/cifar100/cifar100/1.0.0/f365c8b725c23e8f0f8d725c3641234d9331cd2f62919d1381d1baa5b3ba3142)
+2023-04-24 09:47:32,551 Train Epoch: 0
+2023-04-24 10:14:01,322 Evaluate Epoch: 0
+2023-04-24 10:17:51,427 Average val acc: 53.96365814696485
+2023-04-24 10:18:25,217 Best test acc: 53.96365814696485
+2023-04-24 10:18:25,217 Best model saved at ./checkpoints/BLIP_cifar100_question_0.pt
+2023-04-24 10:18:25,220 Train Epoch: 1
+2023-04-24 10:44:45,030 Evaluate Epoch: 1
+2023-04-24 10:48:36,866 Average val acc: 56.11022364217252
+2023-04-24 10:48:38,400 Best test acc: 56.11022364217252
+2023-04-24 10:48:38,400 Best model saved at ./checkpoints/BLIP_cifar100_question_1.pt
+2023-04-24 10:48:38,403 Train Epoch: 2
+2023-04-24 11:14:59,460 Evaluate Epoch: 2
+2023-04-24 11:18:51,136 Average val acc: 57.29832268370607
+2023-04-24 11:18:52,762 Best test acc: 57.29832268370607
+2023-04-24 11:18:52,762 Best model saved at ./checkpoints/BLIP_cifar100_question_2.pt
+2023-04-24 11:18:52,765 Train Epoch: 3
+2023-04-24 11:45:13,902 Evaluate Epoch: 3
+2023-04-24 11:49:01,602 Average val acc: 57.45806709265176
+2023-04-24 11:49:03,241 Best test acc: 57.45806709265176
+2023-04-24 11:49:03,241 Best model saved at ./checkpoints/BLIP_cifar100_question_3.pt
+2023-04-24 11:49:03,244 Train Epoch: 4
+2023-04-24 12:15:30,343 Evaluate Epoch: 4
+2023-04-24 12:19:12,054 Average val acc: 59.12539936102237
+2023-04-24 12:19:13,601 Best test acc: 59.12539936102237
+2023-04-24 12:19:13,601 Best model saved at ./checkpoints/BLIP_cifar100_question_4.pt
+2023-04-24 12:19:13,603 Train Epoch: 5
+2023-04-24 12:45:10,132 Evaluate Epoch: 5
+2023-04-24 12:48:40,419 Average val acc: 59.62460063897763
+2023-04-24 12:48:42,063 Best test acc: 59.62460063897763
+2023-04-24 12:48:42,063 Best model saved at ./checkpoints/BLIP_cifar100_question_5.pt
+2023-04-24 12:48:42,066 Train Epoch: 6
+2023-04-24 13:14:38,950 Evaluate Epoch: 6
+2023-04-24 13:18:10,194 Average val acc: 59.72444089456869
+2023-04-24 13:18:11,763 Best test acc: 59.72444089456869
+2023-04-24 13:18:11,764 Best model saved at ./checkpoints/BLIP_cifar100_question_6.pt
+2023-04-24 13:18:11,766 Train Epoch: 7
+2023-04-24 13:44:11,339 Evaluate Epoch: 7
+2023-04-24 13:47:40,031 Average val acc: 59.81429712460064
+2023-04-24 13:47:41,633 Best test acc: 59.81429712460064
+2023-04-24 13:47:41,633 Best model saved at ./checkpoints/BLIP_cifar100_question_7.pt
+2023-04-24 13:47:41,636 Train Epoch: 8
+2023-04-24 14:13:00,015 Evaluate Epoch: 8
+2023-04-24 14:16:23,993 Average val acc: 59.63458466453674
+2023-04-24 14:16:23,996 Train Epoch: 9
+2023-04-24 14:41:44,635 Evaluate Epoch: 9
+2023-04-24 14:45:08,436 Average val acc: 59.65455271565495
+2023-04-24 14:45:08,436 Early stopping at epoch 9
