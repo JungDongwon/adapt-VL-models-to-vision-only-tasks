@@ -70,9 +70,13 @@ def evaluate(blip_model, device, processor, test_dataloader):
         #print('labels:', labels)
         correct = 0
         for i in range(len(labels)):
-            output = outputs[i].replace(" ", "")
+            output = outputs[i]
             label = labels[i]
-            if output == label:
+            output = output.replace(" ", "")
+            label = label.replace(" ", "")
+            output = output.replace("_", "")
+            label = label.replace("_", "")
+            if output[:len(label)] == label:
                 correct += 1
         acc = (correct * 100) / len(labels)
         total_acc += acc
