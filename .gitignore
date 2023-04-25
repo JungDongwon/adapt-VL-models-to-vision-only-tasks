@@ -4,3 +4,5 @@ cache/**
 .ipynb_checkpoints/**
 *.pkl
 *.jpg
+cifar-100-python/
+.env

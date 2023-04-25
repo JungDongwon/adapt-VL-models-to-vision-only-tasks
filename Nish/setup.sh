@@ -1,6 +1,6 @@
 apt-get update
 apt-get install python3.10-dev libgl1-mesa-glx unzip python3-setuptools vim --yes
-pip install transformers opencv-python scikit-learn datasets ipdb wget matplotlib --quiet
+pip install transformers opencv-python scikit-learn datasets ipdb wget matplotlib openai python-dotenv --quiet
 python -m pip install --upgrade pip
 python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
 # if [ ! -d "tiny-imagenet-200" ]
