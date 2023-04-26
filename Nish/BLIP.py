@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
-from tqdm.notebook import tqdm
+# from tqdm.notebook import tqdm
+from tqdm import tqdm
 from sklearn.metrics import accuracy_score
 import numpy as np
 from datasets import load_dataset, Image
@@ -56,7 +57,7 @@ def collate_fn(batch):
     return batch
 
 @torch.no_grad()
-def evaluate(blip_model, device, processor, test_dataloader):
+def evaluate(blip_model, device, processor, test_dataloader, outputs_to_write, labels_to_write):
     #losses = []  # List of scalar tensors
     total_acc = 0.0
     for batch in tqdm(test_dataloader):
@@ -70,10 +71,16 @@ def evaluate(blip_model, device, processor, test_dataloader):
         #print('labels:', labels)
         correct = 0
         for i in range(len(labels)):
-            output = outputs[i].replace(" ", "")
+            output = outputs[i]
             label = labels[i]
-            if output == label:
+            output = output.replace(" ", "")
+            label = label.replace(" ", "")
+            output = output.replace("_", "")
+            label = label.replace("_", "")
+            if output[:len(label)] == label:
                 correct += 1
+            outputs_to_write.append(output[:len(label)] + "\n")
+            labels_to_write.append(label + "\n")
         acc = (correct * 100) / len(labels)
         total_acc += acc
         #print(acc)
@@ -154,7 +161,8 @@ if __name__ == "__main__":
     logger.info(f"num_epochs: {num_epochs}")
     logger.info(f"max_patience: {max_patience}")
 
-    device = torch.device(device if torch.cuda.is_available() else "cpu")
+    # device = torch.device(device if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     datasets = load_dataset(dataset, cache_dir=cache_dir)
     #datasets = load_dataset('cifar10', cache_dir=cache_dir)
     label_list = datasets["train"].features[label_name].names
@@ -210,7 +218,9 @@ if __name__ == "__main__":
         
         blip_model.eval()
         logger.info(f"Evaluate Epoch: {epoch}")
-        new_test_acc = evaluate(blip_model, device, processor, test_dataloader)
+        outputs_to_write = []
+        labels_to_write = []
+        new_test_acc = evaluate(blip_model, device, processor, test_dataloader, outputs_to_write, labels_to_write)
         # save checkpoint with best test loss
         if new_test_acc > best_test_acc or best_test_acc < 0:
             patience = 0
@@ -221,6 +231,10 @@ if __name__ == "__main__":
             best_test_acc = new_test_acc
             logger.info(f"Best test acc: {best_test_acc}")
             logger.info(f"Best model saved at {checkpoint_dir + '/' + best_checkpoint_filename}")
+            with open("BLIP_Results/BLIP_"+dataset_name+"_"+adaptation_name+"_outputs.txt", 'w') as f:
+                f.writelines(outputs_to_write)
+            with open("BLIP_Results/BLIP_"+dataset_name+"_"+adaptation_name+"_labels.txt", 'w') as f:
+                f.writelines(labels_to_write)
         else:
             patience += 1
             if patience > max_patience:

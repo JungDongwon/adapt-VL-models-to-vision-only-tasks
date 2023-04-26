@@ -1,7 +1,8 @@
 venv/**
 .DS_Store
 cache/**
-.ipynb_checkpoints/**
+**/.ipynb_checkpoints/**
+**/checkpoints/**
 *.pkl
 *.jpg
 cifar-100-python/
