@@ -38,3 +38,31 @@
 2023-04-26 02:02:26,490 Best test acc: 67.14257188498402
 2023-04-26 02:02:26,490 Best model saved at ./checkpoints/BLIP_cifar100_no_text_6.pt
 2023-04-26 02:02:26,495 Train Epoch: 7
+2023-04-26 02:26:47,326 Evaluate Epoch: 7
+2023-04-26 02:30:15,402 Average val acc: 67.28234824281151
+2023-04-26 02:30:16,767 Best test acc: 67.28234824281151
+2023-04-26 02:30:16,767 Best model saved at ./checkpoints/BLIP_cifar100_no_text_7.pt
+2023-04-26 02:30:16,773 Train Epoch: 8
+2023-04-26 02:54:37,683 Evaluate Epoch: 8
+2023-04-26 02:58:03,353 Average val acc: 67.38218849840256
+2023-04-26 02:58:04,744 Best test acc: 67.38218849840256
+2023-04-26 02:58:04,744 Best model saved at ./checkpoints/BLIP_cifar100_no_text_8.pt
+2023-04-26 02:58:04,750 Train Epoch: 9
+2023-04-26 03:22:24,686 Evaluate Epoch: 9
+2023-04-26 03:25:51,148 Average val acc: 67.32228434504792
+2023-04-26 03:25:51,151 Train Epoch: 10
+2023-04-26 03:50:19,896 Evaluate Epoch: 10
+2023-04-26 03:53:55,739 Average val acc: 67.91134185303514
+2023-04-26 03:53:57,108 Best test acc: 67.91134185303514
+2023-04-26 03:53:57,108 Best model saved at ./checkpoints/BLIP_cifar100_no_text_10.pt
+2023-04-26 03:53:57,113 Train Epoch: 11
+2023-04-26 04:18:52,864 Evaluate Epoch: 11
+2023-04-26 04:22:28,356 Average val acc: 68.02116613418531
+2023-04-26 04:22:29,741 Best test acc: 68.02116613418531
+2023-04-26 04:22:29,741 Best model saved at ./checkpoints/BLIP_cifar100_no_text_11.pt
+2023-04-26 04:22:29,746 Train Epoch: 12
+2023-04-26 04:47:23,127 Evaluate Epoch: 12
+2023-04-26 04:50:56,508 Average val acc: 68.14097444089457
+2023-04-26 04:50:57,893 Best test acc: 68.14097444089457
+2023-04-26 04:50:57,894 Best model saved at ./checkpoints/BLIP_cifar100_no_text_12.pt
+2023-04-26 04:50:57,899 Train Epoch: 13
