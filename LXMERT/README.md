@@ -1,0 +1,1 @@
+This folder contains scripts and notebooks that were used to train the LXMERT adaptations. There are also scripts used for generating embeddings into the LXMERT models, although for the most part the embeddings generated in the VisualBERT folder were used.

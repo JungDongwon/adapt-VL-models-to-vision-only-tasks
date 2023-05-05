@@ -1,0 +1,1 @@
+This folder contains the outputs of the fully fine tuned BLIP model when run against the test data, and corresponding labels. There is one pair of text files for each of the 4 adaptations we tested. These files are useful as input to the OpenAI evaluation script.
